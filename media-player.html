@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Media Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --s1: #0f0f1a;
+  --s2: #161624;
+  --s3: #1e1e30;
+  --acc: #7c6af7;
+  --acc2: #f7a26a;
+  --acc3: #6af7d4;
+  --text: #eeeaf8;
+  --muted: #6b6880;
+  --danger: #f76a6a;
+  --glow: rgba(124,106,247,0.35);
+  --glow2: rgba(247,162,106,0.25);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans','Noto Sans Sinhala',sans-serif;
+  display:flex;flex-direction:column;
+  height:100vh;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 0%,rgba(124,106,247,0.1) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 60% at 90% 100%,rgba(106,247,212,0.06) 0%,transparent 60%);
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;
+  background:rgba(15,15,26,0.9);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  flex-shrink:0;z-index:10;
+}
+.logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;
+  background:linear-gradient(90deg,var(--acc),var(--acc3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:0.04em;
+}
+.logo span{font-weight:400;opacity:.5}
+.tab-row{display:flex;gap:4px}
+.tab{
+  padding:6px 16px;border-radius:8px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;
+  background:transparent;color:var(--muted);transition:all .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.tab:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.tab.active{background:rgba(124,106,247,0.18);color:var(--acc)}
+.tab svg{width:15px;height:15px}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex:1;overflow:hidden;min-height:0}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:280px;flex-shrink:0;
+  background:var(--s1);
+  border-right:1px solid rgba(255,255,255,0.04);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.sidebar-head{
+  padding:14px 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.sidebar-head h3{
+  font-family:'Syne',sans-serif;font-size:.78rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+.add-btns{display:flex;gap:6px}
+.add-btn{
+  padding:4px 10px;border-radius:6px;border:none;cursor:pointer;
+  font-size:.72rem;font-weight:600;font-family:inherit;
+  transition:all .2s;
+}
+.add-btn.url{background:rgba(124,106,247,0.2);color:var(--acc)}
+.add-btn.url:hover{background:rgba(124,106,247,0.35)}
+.add-btn.file{background:rgba(247,162,106,0.15);color:var(--acc2)}
+.add-btn.file:hover{background:rgba(247,162,106,0.3)}
+
+.playlist-scroll{flex:1;overflow-y:auto;padding:6px 8px}
+.playlist-scroll::-webkit-scrollbar{width:3px}
+.playlist-scroll::-webkit-scrollbar-thumb{background:var(--acc);border-radius:3px}
+
+.pl-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 8px;border-radius:10px;cursor:pointer;
+  transition:background .18s;position:relative;
+  margin-bottom:2px;
+}
+.pl-item:hover{background:rgba(255,255,255,0.04)}
+.pl-item.active{background:rgba(124,106,247,0.12)}
+.pl-item.active::before{
+  content:'';position:absolute;left:0;top:15%;bottom:15%;
+  width:3px;background:var(--acc);border-radius:3px;
+}
+.pl-thumb{
+  width:40px;height:40px;border-radius:7px;flex-shrink:0;
+  background:var(--s3);display:flex;align-items:center;justify-content:center;
+  font-size:18px;overflow:hidden;
+}
+.pl-thumb img,.pl-thumb video{width:100%;height:100%;object-fit:cover;border-radius:7px}
+.pl-meta{flex:1;min-width:0}
+.pl-title{font-size:.83rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-sub{font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:4px;margin-top:1px}
+.type-badge{
+  font-size:.62rem;padding:1px 5px;border-radius:4px;font-weight:600;letter-spacing:.04em;
+}
+.type-audio{background:rgba(124,106,247,0.2);color:var(--acc)}
+.type-video{background:rgba(106,247,212,0.15);color:var(--acc3)}
+.pl-dur{font-size:.7rem;color:var(--muted);flex-shrink:0}
+.pl-del{
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  opacity:0;font-size:13px;padding:3px;border-radius:4px;transition:all .2s;
+}
+.pl-item:hover .pl-del{opacity:1}
+.pl-del:hover{color:var(--danger)}
+
+.empty-msg{
+  text-align:center;color:var(--muted);padding:32px 16px;font-size:.82rem;
+  line-height:1.8;
+}
+
+/* ── MAIN VIEW ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* VIDEO AREA */
+.video-wrap{
+  flex:1;background:#000;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;min-height:0;
+  cursor:pointer;
+}
+.video-wrap:fullscreen,.video-wrap:-webkit-full-screen{background:#000}
+.media-video{
+  max-width:100%;max-height:100%;
+  display:none;
+  outline:none;
+}
+.media-video.active{display:block}
+.audio-vis{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;width:100%;height:100%;
+}
+.audio-vis.active{display:flex}
+.big-artwork{
+  width:200px;height:200px;border-radius:50%;
+  background:linear-gradient(135deg,var(--s3),#2a1b4e);
+  display:flex;align-items:center;justify-content:center;
+  font-size:80px;
+  border:3px solid var(--acc);
+  box-shadow:0 0 60px var(--glow);
+  transition:box-shadow .4s;
+}
+.big-artwork.spin{animation:spin 10s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.audio-title-big{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;text-align:center}
+.audio-artist-big{color:var(--acc2);font-size:.85rem;text-align:center}
+
+/* Canvas viz */
+.canvas-wrap{position:absolute;bottom:0;left:0;right:0;height:80px;pointer-events:none;opacity:.5}
+#vizCanvas{width:100%;height:100%}
+
+/* No media screen */
+.no-media{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;width:100%;height:100%;color:var(--muted);
+}
+.no-media .big-icon{font-size:64px;opacity:.3}
+.no-media p{font-size:.9rem}
+
+/* hover overlay */
+.vid-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0);transition:background .3s;
+  opacity:0;pointer-events:none;
+}
+.video-wrap:hover .vid-overlay{opacity:1;background:rgba(0,0,0,0.2);pointer-events:auto}
+.vid-play-btn{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(124,106,247,0.8);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);transition:transform .2s;
+}
+.vid-play-btn:hover{transform:scale(1.1)}
+
+/* ── CONTROLS BAR ── */
+.controls-bar{
+  background:var(--s1);
+  border-top:1px solid rgba(255,255,255,0.04);
+  padding:12px 20px 14px;
+  flex-shrink:0;
+}
+.progress-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.time{font-size:.72rem;color:var(--muted);min-width:38px;text-align:center}
+.progress{
+  flex:1;-webkit-appearance:none;height:4px;border-radius:99px;
+  background:var(--s3);cursor:pointer;outline:none;
+}
+.progress::-webkit-slider-runnable-track{
+  height:4px;border-radius:99px;
+  background:linear-gradient(to right,var(--acc) var(--p,0%),var(--s3) var(--p,0%));
+}
+.progress::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--acc);box-shadow:0 0 8px var(--glow);
+  cursor:pointer;margin-top:-5px;
+}
+.ctrl-row{display:flex;align-items:center;justify-content:space-between}
+.ctrl-center{display:flex;align-items:center;gap:10px}
+.ctrl-right{display:flex;align-items:center;gap:8px}
+.ctrl-left{display:flex;align-items:center;gap:8px;min-width:160px}
+
+.cbtn{
+  background:none;border:none;cursor:pointer;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;padding:6px;transition:all .18s;
+}
+.cbtn:hover{color:var(--text);transform:scale(1.1)}
+.cbtn.on{color:var(--acc)}
+.cbtn svg{display:block;width:20px;height:20px}
+
+.cbtn-play{
+  width:50px;height:50px;background:var(--acc);color:#fff !important;
+  border-radius:50%;box-shadow:0 4px 20px var(--glow);
+  transition:transform .15s,box-shadow .2s;
+}
+.cbtn-play:hover{transform:scale(1.08)!important;box-shadow:0 6px 28px var(--glow);}
+.cbtn-play svg{width:24px;height:24px}
+
+.vol-row{display:flex;align-items:center;gap:6px}
+.vol-slider{
+  -webkit-appearance:none;width:80px;height:3px;border-radius:99px;
+  background:var(--s3);cursor:pointer;outline:none;
+}
+.vol-slider::-webkit-slider-runnable-track{
+  height:3px;border-radius:99px;
+  background:linear-gradient(to right,var(--acc2) var(--vp,70%),var(--s3) var(--vp,70%));
+}
+.vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+  background:var(--acc2);cursor:pointer;margin-top:-4.5px;
+}
+
+.speed-sel{
+  background:var(--s3);border:none;color:var(--muted);
+  font-family:inherit;font-size:.72rem;border-radius:6px;
+  padding:3px 7px;cursor:pointer;outline:none;
+}
+.speed-sel:hover{color:var(--text)}
+
+.fullscreen-btn{color:var(--muted)}
+
+/* Now playing mini */
+.now-playing{display:flex;align-items:center;gap:10px;min-width:160px}
+.np-thumb{
+  width:38px;height:38px;border-radius:7px;background:var(--s3);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;
+}
+.np-thumb img{width:100%;height:100%;object-fit:cover}
+.np-info{min-width:0}
+.np-title{font-size:.78rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.np-artist{font-size:.68rem;color:var(--muted)}
+
+/* EQ bars */
+.eq{display:flex;align-items:flex-end;gap:2px;height:14px}
+.eq-b{width:3px;background:var(--acc);border-radius:2px;animation:eqA .5s ease-in-out infinite alternate}
+.eq-b:nth-child(2){animation-duration:.7s;animation-delay:.1s}
+.eq-b:nth-child(3){animation-duration:.4s;animation-delay:.2s}
+.eq-b:nth-child(4){animation-duration:.6s}
+@keyframes eqA{from{height:3px}to{height:13px}}
+.eq.off .eq-b{animation-play-state:paused;height:3px}
+
+/* ── MODAL ── */
+.modal-bg{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+  z-index:200;align-items:center;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--s2);border:1px solid rgba(124,106,247,0.25);
+  border-radius:18px;padding:26px 24px;width:400px;max-width:95vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.8);
+}
+.modal h3{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:18px;
+  background:linear-gradient(90deg,var(--acc),var(--acc3));-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.73rem;color:var(--muted);margin-bottom:5px}
+.field input,.field select{
+  width:100%;padding:9px 12px;
+  background:var(--s1);border:1px solid rgba(255,255,255,0.07);
+  border-radius:9px;color:var(--text);font-family:inherit;font-size:.84rem;outline:none;
+  transition:border-color .2s;
+}
+.field input:focus,.field select:focus{border-color:var(--acc)}
+.modal-btns{display:flex;gap:10px;margin-top:18px}
+.modal-btns button{
+  flex:1;padding:10px;border-radius:10px;font-family:inherit;
+  font-size:.84rem;font-weight:600;cursor:pointer;border:none;transition:opacity .2s;
+}
+.modal-btns button:hover{opacity:.85}
+.mbtn-ok{background:var(--acc);color:#fff}
+.mbtn-cancel{background:var(--s3);color:var(--text)}
+
+/* scrollbar global */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">Nova <span>Media</span></div>
+  <div class="tab-row">
+    <button class="tab active" data-tab="all" onclick="filterTab(this,'all')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg> All
+    </button>
+    <button class="tab" data-tab="audio" onclick="filterTab(this,'audio')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9.28A4 4 0 1014 16V7h4V3h-6z"/></svg> Audio
+    </button>
+    <button class="tab" data-tab="video" onclick="filterTab(this,'video')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg> Video
+    </button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h3>Playlist</h3>
+      <div class="add-btns">
+        <button class="add-btn url" onclick="openModal()">+ URL</button>
+        <button class="add-btn file" onclick="document.getElementById('fileIn').click()">+ File</button>
+      </div>
+    </div>
+    <div class="playlist-scroll" id="playlistEl">
+      <div class="empty-msg" id="emptyMsg">
+        📂 File හෝ URL add කරන්න<br>
+        <small style="font-size:.72rem">MP3 · MP4 · MKV · WebM · OGG</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- Video / Audio area -->
+    <div class="video-wrap" id="videoWrap" ondblclick="toggleFS()">
+      <div class="no-media" id="noMedia">
+        <div class="big-icon">🎬</div>
+        <p>Media file එකක් add කරන්න</p>
+      </div>
+
+      <!-- VIDEO -->
+      <video class="media-video" id="vidEl" playsinline></video>
+
+      <!-- AUDIO VIS -->
+      <div class="audio-vis" id="audioVis">
+        <div class="big-artwork" id="bigArtwork">🎵</div>
+        <div class="audio-title-big" id="audioTitleBig">—</div>
+        <div class="audio-artist-big" id="audioArtistBig">—</div>
+      </div>
+
+      <!-- canvas viz -->
+      <div class="canvas-wrap" id="canvasWrap" style="display:none">
+        <canvas id="vizCanvas"></canvas>
+      </div>
+
+      <!-- overlay play btn -->
+      <div class="vid-overlay" id="vidOverlay">
+        <button class="vid-play-btn" id="vidPlayBtn">
+          <svg id="vidPlayIco" fill="white" viewBox="0 0 24 24" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="vidPauseIco" fill="white" viewBox="0 0 24 24" width="28" height="28" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls-bar">
+      <!-- Progress -->
+      <div class="progress-row">
+        <span class="time" id="curT">0:00</span>
+        <input type="range" class="progress" id="progressBar" min="0" max="100" value="0" step="0.1">
+        <span class="time" id="totT">0:00</span>
+      </div>
+      <!-- Ctrl -->
+      <div class="ctrl-row">
+        <!-- Left: now playing -->
+        <div class="now-playing" id="nowPlaying" style="visibility:hidden">
+          <div class="np-thumb" id="npThumb">🎵</div>
+          <div class="np-info">
+            <div class="np-title" id="npTitle">—</div>
+            <div class="np-artist" id="npArtist">—</div>
+          </div>
+          <div class="eq off" id="eqBars">
+            <div class="eq-b"></div><div class="eq-b"></div>
+            <div class="eq-b"></div><div class="eq-b"></div>
+          </div>
+        </div>
+        <!-- Center: controls -->
+        <div class="ctrl-center">
+          <button class="cbtn" id="btnShuffle" title="Shuffle" onclick="toggleShuffle()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20l16-16M16 20h5v-5M4 4l6.3 6.3"/></svg>
+          </button>
+          <button class="cbtn" title="Previous" onclick="prevTrack()">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button class="cbtn cbtn-play" id="btnPlay" title="Play/Pause" onclick="togglePlay()">
+            <svg id="icoPlay" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="icoPause" fill="white" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <button class="cbtn" title="Next" onclick="nextTrack()">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+          <button class="cbtn" id="btnRepeat" title="Repeat" onclick="cycleRepeat()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+          </button>
+        </div>
+        <!-- Right: volume, speed, fullscreen -->
+        <div class="ctrl-right">
+          <div class="vol-row">
+            <button class="cbtn" onclick="muteToggle()">
+              <svg id="volIco" fill="currentColor" viewBox="0 0 24 24" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>
+            <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="80" oninput="setVol(this.value)">
+          </div>
+          <select class="speed-sel" onchange="setSpeed(this.value)">
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+          <button class="cbtn fullscreen-btn" title="Fullscreen" onclick="toggleFS()">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD URL MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3>🔗 Media URL Add කරන්න</h3>
+    <div class="field">
+      <label>නම (Title)</label>
+      <input type="text" id="mTitle" placeholder="e.g. Sanda Eliya">
+    </div>
+    <div class="field">
+      <label>ගායකයා / Director</label>
+      <input type="text" id="mArtist" placeholder="e.g. Sunil Edirisinghe">
+    </div>
+    <div class="field">
+      <label>Media Type</label>
+      <select id="mType">
+        <option value="audio">🎵 Audio (MP3/OGG)</option>
+        <option value="video">🎬 Video (MP4/WebM/MKV)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>URL</label>
+      <input type="text" id="mUrl" placeholder="https://...">
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn-ok" onclick="addFromUrl()">Add ✓</button>
+    </div>
+  </div>
+</div>
+
+<audio id="audEl"></audio>
+<input type="file" id="fileIn" accept="audio/*,video/*" multiple style="display:none">
+
+<script>
+const audEl = document.getElementById('audEl');
+const vidEl = document.getElementById('vidEl');
+
+const playlist = [];
+let curIdx = -1;
+let shuffle = false;
+let repeatMode = 0; // 0=none,1=one,2=all
+let curTab = 'all';
+let muted = false;
+
+// Audio context for visualizer
+let audioCtx, analyser, source, rafId;
+
+// ── Utils ──
+function fmt(s){
+  if(!s||isNaN(s))return'0:00';
+  const m=Math.floor(s/60),sec=Math.floor(s%60);
+  return`${m}:${sec.toString().padStart(2,'0')}`;
+}
+function updateP(val,max){
+  const b=document.getElementById('progressBar');
+  b.max=max||100;b.value=val;
+  const pct=(max?val/max*100:val);
+  b.style.setProperty('--p',pct+'%');
+}
+function updateVolTrack(){
+  const v=document.getElementById('volSlider');
+  v.style.setProperty('--vp',v.value+'%');
+}
+function activeEl(){return curIdx>=0&&playlist[curIdx]?
+  (playlist[curIdx].type==='video'?vidEl:audEl):null;}
+
+// ── Playlist render ──
+function renderPlaylist(){
+  const el=document.getElementById('playlistEl');
+  const filtered=playlist.filter(s=>curTab==='all'||s.type===curTab);
+  if(filtered.length===0){
+    el.innerHTML='<div class="empty-msg" id="emptyMsg">📂 File හෝ URL add කරන්න<br><small style="font-size:.72rem">MP3 · MP4 · MKV · WebM · OGG</small></div>';
+    return;
+  }
+  el.innerHTML='';
+  filtered.forEach((s,fi)=>{
+    const i=playlist.indexOf(s);
+    const item=document.createElement('div');
+    item.className='pl-item'+(i===curIdx?' active':'');
+    const thumbHtml = s.type==='video'
+      ? `<div class="pl-thumb">${i===curIdx?'▶':'🎬'}</div>`
+      : `<div class="pl-thumb">${i===curIdx?'▶':'🎵'}</div>`;
+    item.innerHTML=`
+      ${thumbHtml}
+      <div class="pl-meta">
+        <div class="pl-title">${s.name}</div>
+        <div class="pl-sub">
+          <span class="type-badge type-${s.type}">${s.type.toUpperCase()}</span>
+          ${s.artist?`<span>${s.artist}</span>`:''}
+        </div>
+      </div>
+      <div class="pl-dur">${s.dur||'--:--'}</div>
+      <button class="pl-del" title="Remove">✕</button>
+    `;
+    item.querySelector('.pl-del').addEventListener('click',e=>{e.stopPropagation();removeSong(i);});
+    item.addEventListener('click',()=>loadPlay(i));
+    el.appendChild(item);
+  });
+  const active=el.querySelector('.active');
+  if(active)active.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+function removeSong(i){
+  if(curIdx===i){stopCurrent();curIdx=-1;resetUI();}
+  else if(curIdx>i)curIdx--;
+  playlist.splice(i,1);
+  renderPlaylist();
+}
+
+function filterTab(btn,tab){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  curTab=tab;
+  renderPlaylist();
+}
+
+// ── Load & Play ──
+function loadPlay(idx){
+  if(idx<0||idx>=playlist.length)return;
+  stopCurrent();
+  curIdx=idx;
+  const s=playlist[idx];
+
+  if(s.type==='video'){
+    vidEl.src=s.url;
+    vidEl.load();
+    vidEl.volume=document.getElementById('volSlider').value/100;
+    vidEl.play().catch(()=>{});
+    showVideoUI();
+  } else {
+    audEl.src=s.url;
+    audEl.load();
+    audEl.volume=document.getElementById('volSlider').value/100;
+    audEl.play().catch(()=>{});
+    showAudioUI(s);
+    setupVisualizer();
+  }
+
+  // Now playing
+  document.getElementById('npTitle').textContent=s.name;
+  document.getElementById('npArtist').textContent=s.artist||'Unknown';
+  document.getElementById('nowPlaying').style.visibility='visible';
+  renderPlaylist();
+}
+
+function stopCurrent(){
+  audEl.pause();vidEl.pause();
+  audEl.src='';vidEl.src='';
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  if(source){try{source.disconnect();}catch(e){}}
+}
+
+function showVideoUI(){
+  document.getElementById('noMedia').style.display='none';
+  document.getElementById('audioVis').classList.remove('active');
+  document.getElementById('canvasWrap').style.display='none';
+  vidEl.classList.add('active');
+}
+
+function showAudioUI(s){
+  document.getElementById('noMedia').style.display='none';
+  vidEl.classList.remove('active');
+  document.getElementById('audioVis').classList.add('active');
+  document.getElementById('canvasWrap').style.display='block';
+  document.getElementById('audioTitleBig').textContent=s.name;
+  document.getElementById('audioArtistBig').textContent=s.artist||'Unknown';
+}
+
+function resetUI(){
+  stopCurrent();
+  vidEl.classList.remove('active');
+  document.getElementById('audioVis').classList.remove('active');
+  document.getElementById('canvasWrap').style.display='none';
+  document.getElementById('noMedia').style.display='flex';
+  document.getElementById('nowPlaying').style.visibility='hidden';
+  updateP(0,100);
+  document.getElementById('curT').textContent='0:00';
+  document.getElementById('totT').textContent='0:00';
+  setPlayingUI(false);
+}
+
+// ── Visualizer ──
+function setupVisualizer(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=256;
+    analyser.connect(audioCtx.destination);
+  }
+  if(source){try{source.disconnect();}catch(e){}}
+  source=audioCtx.createMediaElementSource(audEl);
+  source.connect(analyser);
+  drawViz();
+}
+
+function drawViz(){
+  const canvas=document.getElementById('vizCanvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*devicePixelRatio;
+  canvas.height=canvas.offsetHeight*devicePixelRatio;
+  const buf=new Uint8Array(analyser.frequencyBinCount);
+  function frame(){
+    rafId=requestAnimationFrame(frame);
+    analyser.getByteFrequencyData(buf);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const bw=canvas.width/buf.length*2;
+    buf.forEach((v,i)=>{
+      const h=(v/255)*canvas.height;
+      const x=i*bw;
+      const g=ctx.createLinearGradient(0,canvas.height,0,canvas.height-h);
+      g.addColorStop(0,'rgba(124,106,247,0.8)');
+      g.addColorStop(1,'rgba(106,247,212,0.4)');
+      ctx.fillStyle=g;
+      ctx.fillRect(x,canvas.height-h,bw-1,h);
+    });
+  }
+  frame();
+}
+
+// ── Audio/Video events ──
+function bindEvents(el){
+  el.addEventListener('timeupdate',()=>{
+    if(!isNaN(el.duration)){
+      updateP(el.currentTime,el.duration);
+      document.getElementById('curT').textContent=fmt(el.currentTime);
+      document.getElementById('totT').textContent=fmt(el.duration);
+    }
+  });
+  el.addEventListener('loadedmetadata',()=>{
+    document.getElementById('totT').textContent=fmt(el.duration);
+    if(curIdx>=0)playlist[curIdx].dur=fmt(el.duration);
+    renderPlaylist();
+  });
+  el.addEventListener('play',()=>setPlayingUI(true));
+  el.addEventListener('pause',()=>setPlayingUI(false));
+  el.addEventListener('ended',()=>{
+    if(repeatMode===1){el.currentTime=0;el.play();}
+    else nextTrack();
+  });
+}
+bindEvents(audEl);
+bindEvents(vidEl);
+
+function setPlayingUI(on){
+  document.getElementById('icoPlay').style.display=on?'none':'block';
+  document.getElementById('icoPause').style.display=on?'block':'none';
+  document.getElementById('vidPlayIco').style.display=on?'none':'block';
+  document.getElementById('vidPauseIco').style.display=on?'block':'none';
+  document.getElementById('bigArtwork').classList.toggle('spin',on);
+  document.getElementById('eqBars').classList.toggle('off',!on);
+}
+
+// ── Controls ──
+function togglePlay(){
+  if(playlist.length===0)return;
+  if(curIdx===-1){loadPlay(0);return;}
+  const el=activeEl();
+  if(!el)return;
+  el.paused?el.play():el.pause();
+}
+
+document.getElementById('vidPlayBtn').addEventListener('click',togglePlay);
+
+function nextTrack(){
+  if(!playlist.length)return;
+  let ni;
+  if(shuffle){
+    do{ni=Math.floor(Math.random()*playlist.length);}while(playlist.length>1&&ni===curIdx);
+  } else {
+    ni=(curIdx+1)%playlist.length;
+  }
+  loadPlay(ni);
+}
+function prevTrack(){
+  if(!playlist.length)return;
+  const el=activeEl();
+  if(el&&el.currentTime>3){el.currentTime=0;return;}
+  loadPlay((curIdx-1+playlist.length)%playlist.length);
+}
+
+function toggleShuffle(){
+  shuffle=!shuffle;
+  document.getElementById('btnShuffle').classList.toggle('on',shuffle);
+}
+
+function cycleRepeat(){
+  repeatMode=(repeatMode+1)%3;
+  const btn=document.getElementById('btnRepeat');
+  btn.classList.toggle('on',repeatMode>0);
+  const labels=['Repeat Off','Repeat One','Repeat All'];
+  btn.title=labels[repeatMode];
+}
+
+// Progress scrub
+document.getElementById('progressBar').addEventListener('input',function(){
+  const el=activeEl();if(el)el.currentTime=parseFloat(this.value);
+  this.style.setProperty('--p',(this.value/this.max*100)+'%');
+});
+
+// Volume
+function setVol(v){
+  audEl.volume=v/100;vidEl.volume=v/100;
+  updateVolTrack();
+  muted=false;
+}
+function muteToggle(){
+  muted=!muted;
+  audEl.muted=muted;vidEl.muted=muted;
+}
+function setSpeed(v){
+  audEl.playbackRate=parseFloat(v);
+  vidEl.playbackRate=parseFloat(v);
+}
+updateVolTrack();
+
+// Fullscreen
+function toggleFS(){
+  const wrap=document.getElementById('videoWrap');
+  if(!document.fullscreenElement){
+    wrap.requestFullscreen&&wrap.requestFullscreen();
+  } else {
+    document.exitFullscreen&&document.exitFullscreen();
+  }
+}
+
+// ── Add from URL ──
+function openModal(){document.getElementById('modalBg').classList.add('open');document.getElementById('mTitle').focus();}
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+function addFromUrl(){
+  const name=document.getElementById('mTitle').value.trim();
+  const artist=document.getElementById('mArtist').value.trim();
+  const type=document.getElementById('mType').value;
+  const url=document.getElementById('mUrl').value.trim();
+  if(!url){alert('URL දෙන්න!');return;}
+  addEntry({name:name||'Untitled',artist,type,url});
+  document.getElementById('mTitle').value='';
+  document.getElementById('mArtist').value='';
+  document.getElementById('mUrl').value='';
+  closeModal();
+}
+
+// ── Add from File ──
+document.getElementById('fileIn').addEventListener('change',e=>{
+  [...e.target.files].forEach(f=>{
+    const url=URL.createObjectURL(f);
+    const name=f.name.replace(/\.[^.]+$/,'');
+    const type=f.type.startsWith('video')?'video':'audio';
+    addEntry({name,artist:'Local File',type,url});
+  });
+  e.target.value='';
+});
+
+function addEntry(entry){
+  playlist.push(entry);
+  if(curIdx===-1)loadPlay(playlist.length-1);
+  else renderPlaylist();
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown',e=>{
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.code==='Space'){e.preventDefault();togglePlay();}
+  if(e.code==='ArrowRight')nextTrack();
+  if(e.code==='ArrowLeft')prevTrack();
+  if(e.code==='ArrowUp'){const v=document.getElementById('volSlider');v.value=Math.min(100,+v.value+5);setVol(v.value);}
+  if(e.code==='ArrowDown'){const v=document.getElementById('volSlider');v.value=Math.max(0,+v.value-5);setVol(v.value);}
+  if(e.code==='KeyF')toggleFS();
+});
+
+renderPlaylist();
+</script>
+</body>
+</html>
